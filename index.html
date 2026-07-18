@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ubiscia - Sacred Architecture</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .main-wrapper {
+            display: flex;
+            gap: 30px;
+            max-width: 900px;
+            width: 100%;
+            align-items: stretch;
+            margin-bottom: 30px;
+        }
+
+        .scanner-card {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .info-card {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            flex: 1;
+            display: none; 
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .guide-card {
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            max-width: 900px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .guide-card h3 {
+            color: #1a365d;
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.2rem;
+        }
+
+        .guide-subtitle {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .monuments-grid {
+            display: flex;
+            gap: 20px;
+        }
+
+        .monument-item {
+            flex: 1;
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .monument-item h4 {
+            margin: 0 0 8px 0;
+            color: #2b6cb0;
+            font-size: 1.1rem;
+        }
+
+        .monument-item p {
+            margin: 0 0 15px 0;
+            color: #4a5568;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .map-btn {
+            background-color: #2d3748;
+            color: white;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            transition: background 0.2s ease;
+            display: block;
+        }
+
+        .map-btn:hover {
+            background-color: #1a202c;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #1a365d;
+            margin-top: 0;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+        }
+
+        p.subtitle {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background-color: #2b6cb0;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            box-shadow: 0 4px 6px rgba(43, 108, 176, 0.2);
+            margin: 10px 0;
+        }
+
+        button:hover {
+            background-color: #2c5282;
+        }
+
+        .external-link-btn {
+            background-color: #2d3748;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            width: calc(100% - 48px);
+            transition: background 0.2s ease;
+        }
+
+        .external-link-btn:hover {
+            background-color: #1a202c;
+        }
+
+        #webcam-container {
+            margin: 20px auto;
+            border: 4px solid #e2e8f0;
+            border-radius: 12px;
+            width: 200px;
+            height: 200px;
+            overflow: hidden;
+            background-color: #edf2f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #label-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .result-box {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .percentage {
+            color: #2b6cb0;
+            background-color: #ebf8ff;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .info-card h2 {
+            color: #2b6cb0;
+            margin-top: 0;
+            font-size: 1.4rem;
+        }
+        .info-card p {
+            line-height: 1.6;
+            color: #4a5568;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SECCIÓN DE ESCÁNER E INFORMACIÓN -->
+    <div class="main-wrapper">
+        
+        <div class="scanner-card">
+            <h1>Ubiscia</h1>
+            <p class="subtitle">Scan to identify Santa Rita Basilica or San Francesco Church in Cascia</p>
+            
+            <div id="btn-control-container">
+                <button type="button" onclick="init()">Start Scanner</button>
+            </div>
+            
+            <div id="webcam-container">
+                <span style="color: #a0aec0; font-size: 0.9rem;">Camera inactive</span>
+            </div>
+            
+            <div id="label-container"></div>
+        </div>
+
+        <div class="info-card" id="info-card">
+            <div id="info-content"></div>
+            <div id="dynamic-link-container"></div>
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <button type="button" style="background-color: #4a5568; width: 100%;" onclick="resetScanner()">Scan Again</button>
+        </div>
+
+    </div>
+
+    <!-- SECCIÓN VISUAL DE MONUMENTOS INCLUIDOS Y CÓMO LLEGAR -->
+    <div class="guide-card">
+        <h3>Available Monuments & Navigation</h3>
+        <p class="guide-subtitle">These are the historical points supported by Ubiscia. Tap any button to open GPS routing on your mobile device.</p>
+        
+        <div class="monuments-grid">
+            <div class="monument-item">
+                <div>
+                    <h4>Basilica of Santa Rita</h4>
+                    <p>The iconic 20th-century sanctuary and active global pilgrimage site. Features striking modern architecture and houses the saint's shrine.</p>
+                </div>
+                <a href="https://www.google.com/maps/search/?api=1&query=42.718919,13.012639" target="_blank" class="map-btn">📍 Open Route to Basilica</a>
+            </div>
+
+            <div class="monument-item">
+                <div>
+                    <h4>San Francesco Church</h4>
+                    <p>A beautiful 14th-century Gothic church located right in the historic center. Known for its magnificent exterior stone rose window and classic interior sobriety.</p>
+                </div>
+                <a href="https://www.google.com/maps/search/?api=1&query=42.717839,13.013800" target="_blank" class="map-btn">📍 Open Route to San Francesco</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script type="text/javascript">
+        // Tu enlace actual de Teachable Machine incorporado correctamente
+        const URL = "https://teachablemachine.withgoogle.com/models/7Bf-WKD2l/";
+
+        let model, webcam, labelContainer, maxPredictions;
+        let animationId; 
+        let isStopped = false;
+
+        let smoothedP1 = 0;
+        let smoothedP2 = 0;
+        const smoothingFactor = 0.20; 
+
+        const architecturalData = {
+            "Class1": `
+                <h2>Basilica of Santa Rita</h2>
+                <p><strong>Location:</strong> Cascia, Italy</p>
+                <p><strong>History:</strong> This famous sanctuary in Cascia was built in the 20th century to honor Saint Rita. It serves as a major global pilgrimage destination, housing the incorrupt body of the saint inside the main chapel.</p>
+                <p><strong>Architecture:</strong> The building displays a highly stylized modern Byzantine-Romanesque structure. The interior features rich contemporary frescoes, extensive marble structures, and a distinct octagonal dome layout.</p>
+            `,
+            "Class2": `
+                <h2>San Francesco Church</h2>
+                <p><strong>Location:</strong> Cascia, Italy</p>
+                <p><strong>History:</strong> Located in the historic center of Cascia, this church dates back to the 14th century. It stands as an important historical monument dedicated to Saint Francis, representing centuries of religious heritage in the town.</p>
+                <p><strong>Architecture:</strong> It features a classic regional Gothic design layout. The exterior shows a remarkable rose window on the stone facade, while the interior preserves significant historical frescoes and traditional Franciscan structural sobriety.</p>
+            `,
+            "None": `
+                <h2>No Building Detected</h2>
+                <p><strong>Current Status:</strong> The artificial intelligence system is actively scanning the video input but currently detects the background or an empty frame.</p>
+                <p><strong>Instructions:</strong> Please point the camera directly at a clear image of the Basilica of Santa Rita or the San Francesco Church of Cascia.</p>
+            `
+        };
+
+        const externalLinks = {
+            "Class1": "https://en.wikipedia.org/wiki/Basilica_of_Santa_Rita_da_Cascia",
+            "Class2": "https://it.wikipedia.org/wiki/Chiesa_di_San_Francesco_(Cascia)"
+        };
+
+        function createLabelBoxes() {
+            labelContainer.innerHTML = "";
+            const labelsToCreate = ["Basilica of Santa Rita", "San Francesco Church", "No Target / Background"];
+            for (let i = 0; i < 3; i++) {
+                let divBox = document.createElement("div");
+                divBox.className = "result-box";
+                divBox.innerHTML = `<span class="name">${labelsToCreate[i]}</span><span class="percentage">0%</span>`;
+                labelContainer.appendChild(divBox);
+            }
+        }
+
+        async function init() {
+            document.getElementById("btn-control-container").style.display = "none";
+            document.getElementById("webcam-container").innerHTML = "";
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true; 
+            webcam = new tmImage.Webcam(200, 200, flip); 
+            await webcam.setup(); 
+            await webcam.play();
+            
+            isStopped = false;
+            smoothedP1 = 0;
+            smoothedP2 = 0;
+            animationId = window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            
+            createLabelBoxes();
+        }
+
+        async function loop() {
+            if (isStopped) return; 
+            webcam.update(); 
+            await predict();
+            animationId = window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            
+            let rawP1 = prediction[0] ? prediction[0].probability : 0;
+            let rawP2 = prediction[1] ? prediction[1].probability : 0;
+
+            smoothedP1 = (rawP1 * smoothingFactor) + (smoothedP1 * (1 - smoothingFactor));
+            smoothedP2 = (rawP2 * smoothingFactor) + (smoothedP2 * (1 - smoothingFactor));
+
+            let displayP1 = smoothedP1;
+            let displayP2 = smoothedP2;
+            let displayP3 = 0;
+
+            if (smoothedP1 < 0.15 && smoothedP2 < 0.15) {
+                displayP1 = 0;
+                displayP2 = 0;
+                displayP3 = 1.00;
+            } else {
+                displayP3 = 1 - (displayP1 + displayP2);
+                if (displayP3 < 0) displayP3 = 0;
+            }
+
+            if (labelContainer.childNodes.length === 3) {
+                labelContainer.childNodes[0].querySelector(".percentage").innerText = (displayP1 * 100).toFixed(0) + "%";
+                labelContainer.childNodes[1].querySelector(".percentage").innerText = (displayP2 * 100).toFixed(0) + "%";
+                labelContainer.childNodes[2].querySelector(".percentage").innerText = (displayP3 * 100).toFixed(0) + "%";
+            }
+
+            if (smoothedP1 >= 0.70 && !isStopped) {
+                isStopped = true;
+                cancelAnimationFrame(animationId); 
+                showBuildingInfo("Class1");
+            } else if (smoothedP2 >= 0.70 && !isStopped) {
+                isStopped = true;
+                cancelAnimationFrame(animationId); 
+                showBuildingInfo("Class2");
+            } else if (!isStopped) {
+                showBuildingInfo("None");
+            }
+        }
+
+        function showBuildingInfo(classKey) {
+            const infoCard = document.getElementById("info-card");
+            const infoContent = document.getElementById("info-content");
+            const linkContainer = document.getElementById("dynamic-link-container");
+            
+            infoContent.innerHTML = architecturalData[classKey] || "<h2>Unknown Profile</h2>";
+            
+            if (externalLinks[classKey] && classKey !== "None") {
+                linkContainer.innerHTML = `<a href="${externalLinks[classKey]}" target="_blank" class="external-link-btn">Read Full Article Online</a>`;
+            } else {
+                linkContainer.innerHTML = ""; 
+            }
+            
+            infoCard.style.display = "block"; 
+        }
+
+        function resetScanner() {
+            document.getElementById("info-card").style.display = "none";
+            smoothedP1 = 0;
+            smoothedP2 = 0;
+            createLabelBoxes();
+            isStopped = false;
+            animationId = window.requestAnimationFrame(loop);
+        }
+    </script>
+
+</body>
+</html>
