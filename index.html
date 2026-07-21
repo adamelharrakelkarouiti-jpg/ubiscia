@@ -87,6 +87,21 @@
             background-color: #2c5282;
         }
 
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: #2b6cb0;
+        }
+
         .external-link-btn {
             background-color: #2d3748;
             display: inline-block;
@@ -118,6 +133,13 @@
             font-size: 0.95rem;
         }
 
+        .divider {
+            margin: 15px 0;
+            color: #a0aec0;
+            font-size: 0.85rem;
+            position: relative;
+        }
+
         .info-card h2 {
             color: #2b6cb0;
             margin-top: 0;
@@ -135,17 +157,24 @@
 
     <div class="main-wrapper">
         
-        <!-- PANEL IZQUIERDO: ESCÁNER / BÚSQUEDA -->
+        <!-- PANEL IZQUIERDO: CONTROLES -->
         <div class="scanner-card">
             <h1>Ubiscia</h1>
             <p class="subtitle">Global AI Landmark & Monument Detector</p>
             
             <div id="btn-control-container">
-                <button type="button" onclick="detectLandmark()">🌍 Scan Nearby Landmark</button>
+                <button type="button" onclick="detectLandmarkByIP()">🌍 Auto-Detect Nearby Landmark</button>
+            </div>
+
+            <div class="divider">— OR SEARCH ANY PLACE —</div>
+
+            <div>
+                <input type="text" id="manual-search-input" placeholder="e.g. Alhambra, Eiffel Tower, Sagrada Familia">
+                <button type="button" style="background-color: #2d3748;" onclick="searchManualLandmark()">🔍 Search Landmark</button>
             </div>
             
             <div id="status-box">
-                Tap button to identify monuments anywhere in the world using GPS & Wikipedia.
+                Auto-detect nearby monuments or search any global landmark manually.
             </div>
         </div>
 
@@ -154,7 +183,7 @@
             <div id="info-content"></div>
             <div id="dynamic-link-container"></div>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <button type="button" style="background-color: #4a5568;" onclick="resetScanner()">Scan Again</button>
+            <button type="button" style="background-color: #4a5568;" onclick="resetScanner()">Scan / Search Again</button>
         </div>
 
     </div>
@@ -177,48 +206,70 @@
             }
         }
 
-        // DETECTAR MONUMENTO CERCANO VÍA GPS Y WIKIPEDIA (100% GRATIS)
-        function detectLandmark() {
+        // DETECCIÓN AUTOMÁTICA POR IP (CERO PERMISOS)
+        async function detectLandmarkByIP() {
             const statusBox = document.getElementById("status-box");
-            statusBox.innerText = "📡 Accessing GPS location...";
+            statusBox.innerText = "🌐 Locating your network position...";
 
-            if (!navigator.geolocation) {
-                statusBox.innerText = "❌ Geolocation is not supported by your browser.";
+            try {
+                const ipRes = await fetch('https://ipapi.co/json/');
+                const ipData = await ipRes.json();
+                
+                const lat = ipData.latitude;
+                const lon = ipData.longitude;
+                const city = ipData.city || "your area";
+
+                statusBox.innerText = `🔍 Searching landmarks near ${city}...`;
+
+                const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=10000&gslimit=1&format=json&origin=*`;
+                const wikiRes = await fetch(wikiUrl);
+                const wikiData = await wikiRes.json();
+
+                if (wikiData.query && wikiData.query.geosearch.length > 0) {
+                    const pageId = wikiData.query.geosearch[0].pageid;
+                    const title = wikiData.query.geosearch[0].title;
+                    fetchLandmarkDetails(pageId, title);
+                } else {
+                    statusBox.innerText = `📍 No major landmarks indexed right next to ${city}. Try manual search!`;
+                }
+            } catch (error) {
+                statusBox.innerText = "❌ Connection error. Please try the manual search bar below.";
+            }
+        }
+
+        // BÚSQUEDA MANUAL DE CUALQUIER MONUMENTO
+        async function searchManualLandmark() {
+            const query = document.getElementById("manual-search-input").value.trim();
+            const statusBox = document.getElementById("status-box");
+
+            if (!query) {
+                statusBox.innerText = "⚠️ Please type a landmark or monument name.";
                 return;
             }
 
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
+            statusBox.innerText = `🔍 Searching global database for "${query}"...`;
 
-                statusBox.innerText = "🔍 Searching Wikipedia for world landmarks near you...";
+            try {
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+                const response = await fetch(searchUrl);
+                const data = await response.json();
 
-                try {
-                    // Consulta gratuita a la API de Wikipedia por coordenadas
-                    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=1000&gslimit=1&format=json&origin=*`;
-                    const response = await fetch(wikiUrl);
-                    const data = await response.json();
-
-                    if (data.query && data.query.geosearch.length > 0) {
-                        const pageId = data.query.geosearch[0].pageid;
-                        const title = data.query.geosearch[0].title;
-
-                        fetchLandmarkDetails(pageId, title);
-                    } else {
-                        statusBox.innerText = "📍 No major historical monument found within 1km of your location.";
-                    }
-                } catch (error) {
-                    statusBox.innerText = "❌ Error connecting to global database.";
+                if (data.query && data.query.search.length > 0) {
+                    const pageId = data.query.search[0].pageid;
+                    const title = data.query.search[0].title;
+                    fetchLandmarkDetails(pageId, title);
+                } else {
+                    statusBox.innerText = `❌ No results found for "${query}". Try another name.`;
                 }
-            }, () => {
-                statusBox.innerText = "⚠️ Location access denied. Please allow GPS access to detect landmarks.";
-            });
+            } catch (error) {
+                statusBox.innerText = "❌ Error searching database.";
+            }
         }
 
-        // EXTRAER HISTORIA Y MOSTRAR RESULTADO
+        // EXTRAER HISTORIA Y MOSTRAR RESULTADO CON VOZ
         async function fetchLandmarkDetails(pageId, title) {
             const statusBox = document.getElementById("status-box");
-            statusBox.innerText = `✨ Landmark Found: ${title}`;
+            statusBox.innerText = `✨ Landmark Loaded: ${title}`;
 
             const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&pageids=${pageId}&format=json&origin=*`;
             const response = await fetch(detailUrl);
@@ -227,18 +278,17 @@
             const page = data.query.pages[pageId];
             const extract = page.extract || "No detailed history available.";
 
-            // Mostrar en la tarjeta derecha
             const infoCard = document.getElementById("info-card");
             const infoContent = document.getElementById("info-content");
             const linkContainer = document.getElementById("dynamic-link-container");
 
             infoContent.innerHTML = `
                 <h2>${title}</h2>
-                <p><strong>Global Database Result</strong></p>
+                <p><strong>Global Landmark Result</strong></p>
                 <p>${extract.substring(0, 500)}...</p>
             `;
 
-            linkContainer.innerHTML = `<a href="https://en.wikipedia.org/?curid=${pageId}" target="_blank" class="external-link-btn">Read Full Wikipedia Article</a>`;
+            linkContainer.innerHTML = `<a href="https://en.wikipedia.org/?curid=${pageId}" target="_blank" class="external-link-btn">Read Full Article Online</a>`;
             infoCard.style.display = "block";
 
             // Reproducir audioguía automáticamente
@@ -249,7 +299,8 @@
         function resetScanner() {
             stopAudioGuide();
             document.getElementById("info-card").style.display = "none";
-            document.getElementById("status-box").innerText = "Tap button to identify monuments anywhere in the world using GPS & Wikipedia.";
+            document.getElementById("manual-search-input").value = "";
+            document.getElementById("status-box").innerText = "Auto-detect nearby monuments or search any global landmark manually.";
         }
     </script>
 
