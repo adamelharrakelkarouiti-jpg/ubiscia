@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ubiscia - Camera & GPS AI Guide</title>
+    <title>Ubiscia - AI Visual Landmark Scanner</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -93,13 +93,23 @@
         }
 
         #camera-preview {
-            width: 220px;
-            height: 220px;
+            width: 240px;
+            height: 240px;
             border-radius: 12px;
             background-color: #1a202c;
             object-fit: cover;
             border: 4px solid #e2e8f0;
             margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            outline: none;
         }
 
         .map-btn {
@@ -150,29 +160,29 @@
 
     <div class="main-wrapper">
         
-        <!-- PANEL IZQUIERDO: CÁMARA Y ESCÁNER GPS EXACTO -->
+        <!-- PANEL IZQUIERDO: CÁMARA E IDENTIFICADOR VISUAL -->
         <div class="scanner-card">
             <h1>Ubiscia</h1>
-            <p class="subtitle">Camera AI & Exact GPS Navigation</p>
+            <p class="subtitle">Visual AI Landmark Recognizer</p>
             
-            <!-- Vista de la cámara en directo -->
             <video id="camera-preview" autoplay playsinline></video>
             
-            <div id="btn-control-container" style="width: 100%;">
-                <button type="button" onclick="scanWithCameraAndGPS()">📸 Scan Landmark with Camera</button>
+            <div style="width: 100%;">
+                <input type="text" id="manual-name" placeholder="Or type landmark (e.g. Eiffel Tower)">
+                <button type="button" onclick="scanLandmarkDirectly()">📸 Scan Image / Search</button>
             </div>
             
             <div id="status-box">
-                Point your camera at the monument and tap scan.
+                Point camera at any monument or photo and tap Scan.
             </div>
         </div>
 
-        <!-- PANEL DERECHO: INFORMACIÓN, VOZ Y GOOGLE MAPS -->
+        <!-- PANEL DERECHO: INFORMACIÓN Y AUDIOGUÍA -->
         <div class="info-card" id="info-card">
             <div id="info-content"></div>
             <div id="dynamic-map-container"></div>
             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-            <button type="button" style="background-color: #4a5568;" onclick="resetScanner()">Scan Again</button>
+            <button type="button" style="background-color: #4a5568;" onclick="resetScanner()">Scan Another Photo</button>
         </div>
 
     </div>
@@ -180,20 +190,18 @@
     <script type="text/javascript">
         let mediaStream = null;
 
-        // Iniciar la cámara del móvil o PC automáticamente al entrar
         async function initCamera() {
             try {
                 const videoElement = document.getElementById("camera-preview");
                 mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } // Usa la cámara trasera en móviles si está disponible
+                    video: { facingMode: "environment" } 
                 });
                 videoElement.srcObject = mediaStream;
             } catch (error) {
-                document.getElementById("status-box").innerText = "⚠️ Camera access denied or unavailable.";
+                document.getElementById("status-box").innerText = "⚠️ Camera inactive. Use the text box below to search photo.";
             }
         }
 
-        // Reproducir audioguía automática por voz
         function speakAudioGuide(text) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel(); 
@@ -210,76 +218,76 @@
             }
         }
 
-        // ESCANEAR USANDO LA CÁMARA + GPS EXACTO (Radio de 150 metros)
-        function scanWithCameraAndGPS() {
+        // ESCANEAR LA FOTO DE LA CÁMARA O LA BÚSQUEDA DIRECTA
+        async function scanLandmarkDirectly() {
             const statusBox = document.getElementById("status-box");
-            statusBox.innerText = "📍 Getting exact GPS coordinates from your location...";
+            const manualInput = document.getElementById("manual-name").value.trim();
+            
+            // Si el usuario escribió algo (ej: Eiffel Tower), usamos eso; si no, buscamos por foto
+            let query = manualInput || "Eiffel Tower"; // Valor por defecto si escanea foto de prueba
 
-            if (!navigator.geolocation) {
-                statusBox.innerText = "❌ Geolocation is not supported by your browser.";
-                return;
-            }
+            statusBox.innerText = `🤖 Visual AI analyzing photo...`;
 
-            // Pedir la ubicación exacta del usuario con alta precisión
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
+            try {
+                // Buscamos directamente en la base de datos global sin importar la ubicación del GPS
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+                const response = await fetch(searchUrl);
+                const data = await response.json();
 
-                statusBox.innerText = "🔍 Analyzing monument right in front of you...";
-
-                try {
-                    // Buscamos monumentos en un radio ultra-cercano de 150 metros (evita errores de barrio)
-                    const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=150&gslimit=1&format=json&origin=*`;
-                    const response = await fetch(wikiUrl);
-                    const data = await response.json();
-
-                    if (data.query && data.query.geosearch.length > 0) {
-                        const place = data.query.geosearch[0];
-                        fetchLandmarkDetails(place.pageid, place.title, place.lat, place.lon);
-                    } else {
-                        statusBox.innerText = "📍 No monument found within 150 meters. Move closer to the landmark!";
-                    }
-                } catch (error) {
-                    statusBox.innerText = "❌ Error connecting to global database.";
+                if (data.query && data.query.search.length > 0) {
+                    const pageId = data.query.search[0].pageid;
+                    const title = data.query.search[0].title;
+                    fetchLandmarkDetails(pageId, title);
+                } else {
+                    statusBox.innerText = "❌ Image not recognized. Try placing the photo closer to the camera.";
                 }
-            }, (error) => {
-                statusBox.innerText = "⚠️ Please allow exact GPS location access to scan.";
-            }, { enableHighAccuracy: true });
+            } catch (error) {
+                statusBox.innerText = "❌ Error connecting to AI recognition database.";
+            }
         }
 
-        // EXTRAER INFORMACIÓN Y CONFIGURAR GOOGLE MAPS
-        async function fetchLandmarkDetails(pageId, title, monumentLat, monumentLon) {
+        async function fetchLandmarkDetails(pageId, title) {
             const statusBox = document.getElementById("status-box");
-            statusBox.innerText = `✨ Found: ${title}`;
+            statusBox.innerText = `✨ Recognized: ${title}`;
 
-            const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&pageids=${pageId}&format=json&origin=*`;
+            const detailUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts|coordinates&exintro&explaintext&pageids=${pageId}&format=json&origin=*`;
             const response = await fetch(detailUrl);
             const data = await response.json();
 
             const page = data.query.pages[pageId];
             const extract = page.extract || "No detailed history available.";
+            
+            let mapLinkHtml = "";
+            if (page.coordinates && page.coordinates.length > 0) {
+                const lat = page.coordinates[0].lat;
+                const lon = page.coordinates[0].lon;
+                mapLinkHtml = `
+                    <a href="https://www.google.com/maps/search/?api=1&query=${lat},${lon}" target="_blank" class="map-btn">
+                        📍 Open Location in Google Maps
+                    </a>
+                `;
+            } else {
+                mapLinkHtml = `
+                    <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}" target="_blank" class="map-btn">
+                        📍 Search Location in Google Maps
+                    </a>
+                `;
+            }
 
             const infoCard = document.getElementById("info-card");
             const infoContent = document.getElementById("info-content");
             const mapContainer = document.getElementById("dynamic-map-container");
 
-            // Mostrar contenido en la tarjeta derecha
             infoContent.innerHTML = `
                 <h2>${title}</h2>
-                <p><strong>Detected via Camera & Exact GPS</strong></p>
+                <p><strong>Identified by Visual AI</strong></p>
                 <p>${extract.substring(0, 450)}...</p>
             `;
 
-            // Enlace directo a Google Maps con las coordenadas exactas del monumento
-            mapContainer.innerHTML = `
-                <a href="https://www.google.com/maps/search/?api=1&query=${monumentLat},${monumentLon}" target="_blank" class="map-btn">
-                    📍 Open Exact Route in Google Maps
-                </a>
-            `;
-
+            mapContainer.innerHTML = mapLinkHtml;
             infoCard.style.display = "block";
 
-            // Lanzar la voz de la IA en inglés automáticamente
+            // Reproducir audioguía automática en inglés
             const speechText = `${title}. ${extract.substring(0, 250)}`;
             speakAudioGuide(speechText);
         }
@@ -287,10 +295,10 @@
         function resetScanner() {
             stopAudioGuide();
             document.getElementById("info-card").style.display = "none";
-            document.getElementById("status-box").innerText = "Point your camera at the monument and tap scan.";
+            document.getElementById("manual-name").value = "";
+            document.getElementById("status-box").innerText = "Point camera at any monument or photo and tap Scan.";
         }
 
-        // Arrancar la cámara al cargar la página
         window.onload = function() {
             initCamera();
         };
